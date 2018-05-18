@@ -1,0 +1,72 @@
+// ==UserScript==
+// @name     Unnamed Script 290076
+// @version  1
+// @grant    none
+// @include https://www.pole-emploi.fr/* 
+// @require https://code.jquery.com/jquery-3.3.1.min.js
+// ==/UserScript==
+
+var compteur=0 //mauvais clicks sur éléments sans utilité
+var aInteragi=false;//l'utilisateur a interagi avec la borne pendant les 30 dernières secondes
+var intervalle=0;
+
+  //envoi au WS des infos
+  function sendToWS(typeMsg) {//1=click trop fréquent 2=Inactivité	3=appel à l'aide
+      console.log("Appel WS"+typeMsg);
+    //var arr = { "typeCapteur" : typeMsg };
+    //var arrJson = btoa(JSON.stringify(arr));
+    //alert(arrJson);
+    $.post( "http://localhost:59378/api/JS/"+typeMsg)
+  		.done(function( data ) {
+    	//alert( "Data Loaded: " + data );
+  	});
+  
+  }
+
+
+$(document).ready(function() {
+  //ajout du bouton d'aide
+  $(".header-left").append("<span id='callhelp' style='background-color:red;'>Appeler à l'aide</span>");
+
+	//détection de clicks/touch sur l'écran
+	$("body").click(function(event){ 
+    aInteragi=true;
+    compteur++;
+    console.log( "clicked: "+compteur + " " + event.target.nodeName ); 
+    if(compteur>10){//On vérifie si sur 15 secondes l'utilisateur a pas trop cliqué. Si cliqué sur un vrai lien le script est relancé, donc pas besoin de vérifier. 
+      sendToWS(1);
+      compteur=0;
+    }
+	});
+	//détection de saisie au clavier
+  $(document).on("keypress", function (e) {
+    aInteragi=true;
+	});
+  
+  	$("#callhelp").click(function(event){ 
+    console.log( "Appel à l'aide " ); 
+      sendToWS(3);
+
+	});
+
+
+
+});//fin document ready
+
+setInterval(function(){ 
+	intervalle++;
+  //console.log("T: "+intervalle+" "+aInteragi);//debug
+  if(intervalle===15 || intervalle===30){
+    console.log("Remise à zéro du compteur");
+    compteur=0;
+  };
+  if(intervalle===30){
+    console.log("Remise à zéro de l'intervalle");
+  	intervalle=0;
+    if(aInteragi===false)sendToWS(2);
+    
+    aInteragi=false;
+    
+  }
+  
+}, 1000);//intervalle d'une seconde.  
